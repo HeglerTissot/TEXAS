@@ -20,7 +20,7 @@ class SpanAnnotation(Annotation):
     def getLabel(self):
         return self._label
 
-    def jss(self):
+    def TAS(self):
         d = {}
         d["type"] = self._type
         d["label"] = self._label

@@ -7,11 +7,12 @@ from .Metadata import Metadata
 from .Bits import Bits
 from texas.views.AnnotationViewSet import AnnotationViewSet
 from texas.views.Tokens import Tokens
+from texas.views.TokenView import TokenView
 from texas.views.Sentences import Sentences
 
 def reverse(jss: dict):
     if not type(jss) is dict:
-        raise Exception("TextAnnotationSchema import 'jss' parameter type is required to be 'dict'");
+        raise Exception("TextAnnotationSchema import JSON-Serializable-Schema 'jss' parameter type is required to be 'dict'");
     jssType = None
     jssText = None
     jssLang = None
@@ -35,7 +36,7 @@ def reverse(jss: dict):
             # newTX.bits().reverse(jss[attr])
             jss = jss[attr]
             if not type(jss) is list:
-                raise Exception("Bits reverse 'jss' parameter type is required to be 'list'");
+                raise Exception("Bits reverse JSON-Serializable-Schema 'jss' parameter type is required to be 'list'");
             newTX.bits()._bits = []
             for bit in jss:
                 if not type(bit) is dict:
@@ -119,14 +120,15 @@ class TextAnnotationSchema():
             raise Exception("AnnotationView 'TOKENS' does NOT exist");
         tokensView = self.getAnnViewSet().get("TOKENS")
         for ann in tokensView.getAnnSet().getAnns():
-            tokenList.append( { "label":ann.getLabel(), "start_char": ann.getStartChar(), "final_char": ann.getFinalChar() } )
+            # tokenList.append( { "label":ann.getLabel(), "start_char": ann.getStartChar(), "final_char": ann.getFinalChar() } )
+            tokenList.append( ann.TAS() )
         return tokenList
 
-    def setTokenList(self, pTokenList:list):
+    def setTokenList(self, pTokenList:list, indexed=False):
         if not type(pTokenList) is list:
             raise Exception("TextAnnotationSchema 'pTokenList' parameter type is required to be 'list'");
         if self.getAnnViewSet().exists("TOKENS"):
-            raise Exception("AnnotationView 'TOKENS' already set");
+            raise Exception("AnnotationView 'TOKENS' already exists");
         tokenList = []
         lastEndCharPos = 0
         for tok in pTokenList:
@@ -206,8 +208,13 @@ class TextAnnotationSchema():
             lastEndCharPos = tokenEntry["endCharPos"]
             
         tokensView = Tokens()
+        tokenIndex = -1
         for token in tokenList:
-            tokensView.add ( token["startCharPos"] , token["endCharPos"] , token["textToken"] )
+            if indexed:
+                tokenIndex += 1
+                tokensView.add ( token["startCharPos"] , token["endCharPos"] , token["textToken"] , tokenIndex)
+            else:
+                tokensView.add ( token["startCharPos"] , token["endCharPos"] , token["textToken"] )
         self.getAnnViewSet().add(tokensView)
         return
     
@@ -219,7 +226,7 @@ class TextAnnotationSchema():
         if not type(pSentenceList) is list:
             raise Exception("TextAnnotationSchema 'pSentenceList' parameter type is required to be 'list'");
         if self.getAnnViewSet().exists("SENTENCES"):
-            raise Exception("AnnotationView 'SENTENCES' already set");
+            raise Exception("AnnotationView 'SENTENCES' already exists");
         if not self.getAnnViewSet().exists("TOKENS"):
             raise Exception("AnnotationView 'TOKENS' does NOT exist yet");
         sentenceList = []
@@ -258,12 +265,63 @@ class TextAnnotationSchema():
             raise Exception("AnnotationView 'SENTENCES' does NOT exist");
         sentView = self.getAnnViewSet().get("SENTENCES")
         for ann in sentView.getAnnSet().getAnns():
+            d = ann.TAS()
             startChar = tokenInfo[ann.getStartToken()]["start_char"]
             finalChar = tokenInfo[ann.getFinalToken()-1]["final_char"]
-            sentList.append( { "sentence": self.getText()[startChar:finalChar], "label": ann.getLabel(), "start_token": ann.getStartToken(), "final_token": ann.getFinalToken(), "start_char": startChar, "final_char": finalChar } )
+            d["start_char"] = startChar
+            d["final_char"] = finalChar
+            d["sentence"] = self.getText()[startChar:finalChar]
+            # sentList.append( { "sentence": self.getText()[startChar:finalChar], "label": ann.getLabel(), "start_token": ann.getStartToken(), "final_token": ann.getFinalToken(), "start_char": startChar, "final_char": finalChar } )
+            sentList.append( d )
         return sentList
 
-    def jss(self):
+    #
+    # TOKEN specific methods
+    #
+    def addTokenView(self, pViewName:str , pLabelList:list):
+        if not type(pViewName) is str:
+            raise Exception("addTokenView 'pViewName' parameter type is required to be 'str'");
+        if not type(pLabelList) is list:
+            raise Exception("addTokenView 'pLabelList' parameter type is required to be 'list'");
+        if self.getAnnViewSet().exists(pViewName):
+            raise Exception("AnnotationView '"+pViewName+"' already exists");
+        if not self.getAnnViewSet().exists("TOKENS"):
+            raise Exception("AnnotationView 'TOKENS' does NOT exist yet");
+        tokenList = self.getTokenList()
+        if len(pLabelList) != len(tokenList):
+            raise Exception("Size of 'pLabelList' ("+str(len(pLabelList))+") does NOT match number of tokens ("+str(len(tokenList))+")");
+        
+        annList = []
+        tokenIndex = -1
+        for labelEntry in pLabelList:
+            tokenEntry = {"tokenIndex": -1, "label": None}
+
+            # <str> labels only
+            if type(labelEntry) is str:
+                tokenIndex += 1
+                tokenEntry["tokenIndex"] = tokenIndex
+                tokenEntry["label"] = labelEntry
+
+            # validate tokenEntry 
+            if tokenEntry["tokenIndex"] == -1:
+                raise Exception("Not possible to identify 'tokenIndex' for pLabelList entry '"+str(labelEntry)+"'");
+            if tokenEntry["label"] is None:
+                raise Exception("Not possible to identify 'label' for pLabelList entry '"+str(labelEntry)+"'");
+            
+            # add tokenEntry to tokenList and update(increase) lastEndCharPos
+            annList.append(tokenEntry)
+
+        newTokenView = TokenView(pViewName)
+        for ann in annList:
+            newTokenView.add ( pTokenIndex = ann["tokenIndex"] , pLabel = ann["label"] )
+        self.getAnnViewSet().add(newTokenView)
+        return
+
+    #
+    # jss >> getSchema
+    #
+
+    def TAS(self):
         d = {}
         d["type"] = self.getType()
         if not self.getText() is None:
@@ -273,9 +331,9 @@ class TextAnnotationSchema():
         if not self.getDate().getTimestamp() is None:
             d["date"] = self.getDate().getTimestamp()
         if self.getMeta() is not None and self.getMeta().size() > 0:
-            d["meta"] = self.getMeta().jss()
+            d["meta"] = self.getMeta().TAS()
         if self.getBits() is not None and self.getBits().size() > 0:
-            d["bits"] = self.getBits().jss()
+            d["bits"] = self.getBits().TAS()
         if self.getViews() is not None and self.getViews().size() > 0:
-            d["view"] = self.getViews().jss()
+            d["view"] = self.getViews().TAS()
         return d

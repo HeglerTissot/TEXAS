@@ -24,10 +24,10 @@ class AnnotationSet:
     def size(self):
         return len(self._anns)
         
-    def jss(self):
+    def TAS(self):
         d = []
         for annotation in self.getAnns():
-            d.append( annotation.jss() )
+            d.append( annotation.TAS() )
         return d
         
     def reverse(self, jss: list):
@@ -41,13 +41,15 @@ class AnnotationSet:
             if not "type" in ann:
                 raise Exception("Missing 'type' attribute in Annotation during reverse");
             if ann["type"] == "char":
+                if not "index" in ann:
+                    ann["index"] = None
                 if not "label" in ann:
                     raise Exception("Missing 'label' attribute in CharAnnotation during reverse");
                 if not "start_char" in ann:
                     raise Exception("Missing 'start_char' attribute in CharAnnotation during reverse");
                 if not "final_char" in ann:
                     raise Exception("Missing 'final_char' attribute in CharAnnotation during reverse");
-                self.getAnns().append (CharAnnotation(pStartChar = ann["start_char"], pFinalChar = ann["final_char"], pLabel = ann["label"]))
+                self.getAnns().append (CharAnnotation(pStartChar = ann["start_char"], pFinalChar = ann["final_char"], pLabel = ann["label"], pIndex = ann["index"]))
             if ann["type"] == "token":
                 if not "token_index" in ann:
                     raise Exception("Missing 'token_index' attribute in CharAnnotation during reverse");
