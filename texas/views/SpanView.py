@@ -10,5 +10,5 @@ class SpanView(AnnotationView):
         # automatically set type as "SpanView"
         super(SpanView, self).__init__(pName = pName, pType = "AnnotationView"+"."+"SpanView")
 
-    def add(self,pStartToken:int, pFinalToken:int, pLabel:str = ""):
-        self.getAnnSet().add ( SpanAnnotation(pStartToken, pFinalToken, pLabel) )
+    def add(self,pStartToken:int, pFinalToken:int, pLabel:str = "", pSpan:str = None):
+        self.getAnnSet().add ( SpanAnnotation(pStartToken, pFinalToken, pLabel, pSpan) )

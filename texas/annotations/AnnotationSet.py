@@ -63,7 +63,11 @@ class AnnotationSet:
                     raise Exception("Missing 'final_token' attribute in CharAnnotation during reverse");
                 if not "label" in ann:
                     raise Exception("Missing 'label' attribute in CharAnnotation during reverse");
-                self.getAnns().append (SpanAnnotation(pStartToken = ann["start_token"], pFinalToken = ann["final_token"], pLabel = ann["label"]))
+                annSpan = None
+                if "span" in ann:
+                    annSpan = ann["span"]
+                self.getAnns().append (SpanAnnotation(pStartToken = ann["start_token"], pFinalToken = ann["final_token"], pLabel = ann["label"], pSpan=annSpan))
+
             
         '''
         self._anns = {}

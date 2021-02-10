@@ -8,6 +8,7 @@ from .Bits import Bits
 from texas.views.AnnotationViewSet import AnnotationViewSet
 from texas.views.Tokens import Tokens
 from texas.views.TokenView import TokenView
+from texas.views.SpanView import SpanView
 from texas.views.Sentences import Sentences
 
 def reverse(jss: dict):
@@ -315,6 +316,73 @@ class TextAnnotationSchema():
         for ann in annList:
             newTokenView.add ( pTokenIndex = ann["tokenIndex"] , pLabel = ann["label"] )
         self.getAnnViewSet().add(newTokenView)
+        return
+
+    #
+    # SPAN specific methods
+    #
+    def addSpanView(self, pViewName:str , pLabelList:list):
+        if not type(pViewName) is str:
+            raise Exception("addSpanView 'pViewName' parameter type is required to be 'str'");
+        if not type(pLabelList) is list:
+            raise Exception("addSpanView 'pLabelList' parameter type is required to be 'list'");
+        if self.getAnnViewSet().exists(pViewName):
+            raise Exception("AnnotationView '"+pViewName+"' already exists");
+        if not self.getAnnViewSet().exists("TOKENS"):
+            raise Exception("AnnotationView 'TOKENS' does NOT exist yet");
+        tokenList = self.getTokenList()
+        
+        annList = []
+        for labelEntry in pLabelList:
+            spanEntry = {"start_token": -1, "final_token": -1, "label": None}
+
+            # <dict> 
+            if type(labelEntry) is dict:
+                if "label" in labelEntry:
+                    spanEntry["label"] = labelEntry["label"]
+                if "start_token" in labelEntry:
+                    spanEntry["start_token"] = labelEntry["start_token"]
+                if "final_token" in labelEntry:
+                    spanEntry["final_token"] = labelEntry["final_token"]
+
+            # <list> 
+            if type(labelEntry) is list:
+                if len(labelEntry) > 0: 
+                    if type(labelEntry[0]) is not str:
+                        raise Exception("'label' not found in labelEntry[0] for pLabelList entry '"+str(labelEntry)+"'")
+                    else:
+                        spanEntry["label"] = labelEntry[0]
+                if len(labelEntry) > 1:
+                    if type(labelEntry[1]) is not int:
+                        raise Exception("'start_index' not found in labelEntry[1] for pLabelList entry '"+str(labelEntry)+"'")
+                    else:
+                        spanEntry["start_token"] = labelEntry[1]
+                        spanEntry["final_token"] = labelEntry[1]+1
+                if len(labelEntry) > 2:
+                    if type(labelEntry[2]) is not int:
+                        raise Exception("'final_index' not found in labelEntry[2] for pLabelList entry '"+str(labelEntry)+"'")
+                    else:
+                        spanEntry["final_token"] = labelEntry[2]
+ 
+            # validate spanEntry 
+            if spanEntry["start_token"] == -1:
+                raise Exception("Not possible to identify 'start_token' for pLabelList entry '"+str(labelEntry)+"'");
+            if spanEntry["start_token"] < 0 or spanEntry["start_token"] > len(tokenList)-1:
+                raise Exception("Invalid 'start_token' index for pLabelList entry '"+str(labelEntry)+"' valid range ("+str(0)+","+str(len(tokenList)-1)+")" )
+            if spanEntry["final_token"] == -1:
+                raise Exception("Not possible to identify 'final_token' for pLabelList entry '"+str(labelEntry)+"'");
+            if spanEntry["final_token"] < 1 or spanEntry["final_token"] > len(tokenList):
+                raise Exception("Invalid 'final_token' index for pLabelList entry '"+str(labelEntry)+"' valid range ("+str(1)+","+str(len(tokenList))+")" )
+            if spanEntry["label"] is None:
+                raise Exception("Not possible to identify 'label' for pLabelList entry '"+str(labelEntry)+"'")
+            
+            # add spanEntry to tokenList and update(increase) lastEndCharPos
+            annList.append(spanEntry)
+
+        newSpanView = SpanView(pViewName)
+        for ann in annList:
+            newSpanView.add ( pStartToken = ann["start_token"] , pFinalToken = ann["final_token"] , pLabel = ann["label"], pSpan = " ".join(tokenList[ann["start_token"]:ann["final_token"]]) )
+        self.getAnnViewSet().add(newSpanView)
         return
 
     #
