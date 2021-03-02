@@ -2,6 +2,66 @@ import json
 import texas as tx
 import stanza
 
+# ignore all the following "playing" segments
+
+'''
+nlp = stanza.Pipeline("pt")
+text = "Eu não gosto daquela laranja que vejo no pomar."
+doc = nlp(text)
+for sentence in doc.sentences:
+    print(sentence)
+for token in doc.iter_tokens():
+    print(token)
+
+UDPipe
+nlpD = spacy_udpipe.load("pt")
+# nlpD = spacy_udpipe.load("pt").tokenizer
+text = "
+u não gosto daquela laranja que vejo no pomar.
+"
+doc = nlpD(text)
+
+for t in doc:
+    tok = t
+    print(t, t.idx)
+    
+for sentence in doc.sents:
+    sent = sentence
+    print(sentence)
+
+
+spacy
+nlp = spacy.load("pt_core_news_sm")
+text = "Eu não gosto daquela laranja que vejo no pomar."
+doc = nlp(text)
+
+>>> Italian !!!
+
+nlp = spacy.load("it_core_news_sm")
+
+text = "Apple vuole comprare una startup del Regno Unito per un miliardo di dollari."
+
+doc = nlp(text)
+
+for t in doc:
+    tok = t
+    print(t, t.idx, t.lemma_, t.pos_, t.tag_)
+
+
+
+nlp = stanza.Pipeline("it")
+
+text = "Apple vuole comprare una startup del Regno Unito per un miliardo di dollari."
+
+doc = nlp(text)
+
+for sentence in doc.sentences:
+    print(sentence)
+for token in doc.iter_tokens():
+    print(token)
+
+'''
+
 # create a document
 
 TXLang = "en"
@@ -34,6 +94,15 @@ for sentence in doc.sentences:
 mydoc1 = tx.Document(TXText, TXLang)
 # mydoc1.meta().set("generator","stanza")
 # mydoc1.meta().set("model",TXSpacyModel)
+
+'''
+text = "Eu não gosto daquela laranja que de vejo no pomar."
+
+Eu não gosto "de+aquela" laranja que vejo em+o pomar .
+             "PREP+PRON"
+             ["PREP","PRON"]
+
+'''
 
 mydoc1.setTokenList( nlpTokenList, indexed=True)
 mydoc1.views().get("TOKENS").meta().set("generator","stanza")
